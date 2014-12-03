@@ -22,14 +22,8 @@ gcm::gcm(void)
 gcm::~gcm(void)
 {
 	//Release
-
-// 	for (int i=0; i<maxFrameNum; i++)
-// 	{
-// 		delete feature_ori[i];
-// 	}
-	delete feature_ori;
-
-	delete gcm_subspace; 
+	deleteMatrix(feature_ori, maxFrameNum);
+	deleteMatrix(gcm_subspace, featureDim);
 }
 
 
@@ -56,22 +50,22 @@ void gcm::readInData(CString FileName)
 		return;
 	}
 
-	feature_ori = GetData(fp, nFrames, &nFrames);
+	GetData(fp, nFrames, &nFrames, feature_ori);
 	fclose(fp);
 }
 
-double** gcm::GetData(FILE* fp, int Tmax, int *tl)
+double** gcm::GetData(FILE* fp, int Tmax, int *tl, double** data)
 {
 	int no_of_inputs,ip_dimension,il;
 	float  buffer;
-	double **totaldata;
+	//double **totaldata;
 
 	fscanf(fp, "%d", &no_of_inputs);
 	fscanf(fp, "%d", &ip_dimension);
 
 	*tl=no_of_inputs;
 
-	totaldata=(double**)Alloc2d(no_of_inputs,ip_dimension,sizeof(double));
+	//totaldata=(double**)Alloc2d(no_of_inputs,ip_dimension,sizeof(double));
 	for (int iin = 0; iin < no_of_inputs; iin++) 
 	{
 		for ( il = 0; il < ip_dimension; il++)	
@@ -79,10 +73,10 @@ double** gcm::GetData(FILE* fp, int Tmax, int *tl)
 		  
 	    	if (fscanf(fp, "%f", &buffer) == EOF)
 				exit(1);
-			totaldata[iin][il] = buffer;
+			data[iin][il] = buffer;
 		}
 	}
-	return (totaldata);
+	//return (totaldata);
 	return NULL;
 }
 
@@ -186,6 +180,11 @@ void gcm::gcmSubspace(void)
 			gcm_subspace[i][j] = C[i][j];
 		}
 	}
+
+	//Release
+	deleteMatrix(C,nDimension);
+	delete w;
+	deleteMatrix(v, nDimension);
 }
 
 
@@ -194,4 +193,14 @@ double** gcm::GenerateSubspace(CString FileName)
 	readInData(FileName);
 	gcmSubspace();
 	return gcm_subspace;
+}
+
+
+void gcm::deleteMatrix(double** matrix, int dimension)
+{
+	for (int i=0; i<dimension; i++)
+	{
+		delete matrix[i];
+	}
+	delete matrix;
 }

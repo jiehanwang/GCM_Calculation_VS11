@@ -43,5 +43,7 @@ double gcmKernel::Frobenius(double** A, double** B, int dim, int n)
 
 
 	C_sum = pow(C_sum, 0.5);
+
+	deleteMatrix(C, n);
 	return C_sum;
 }

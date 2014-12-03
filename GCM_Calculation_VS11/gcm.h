@@ -18,14 +18,15 @@ public:
 	double** gcm_subspace;
 	int nFrames;
 	int nDimension;
-	static const int subspaceDim = 10;
+	static const int subspaceDim = subSpaceDim;
 
 
 	//vector<float> feature_ori;
 	void readInData(CString FileName);
-	double** GetData(FILE* fp, int Tmax, int *tl);
+	double** GetData(FILE* fp, int Tmax, int *tl, double** data);
 	char **Alloc2d(int dim1, int dim2,int size);
 	void gcmSubspace(void);
 	double** GenerateSubspace(CString FileName);
+	void deleteMatrix(double** matrix, int dimension);
 };
 
