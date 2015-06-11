@@ -13,11 +13,11 @@ static int iminarg1,iminarg2;
 #define IMIN(a,b) (iminarg1=(a),iminarg2=(b),(iminarg1) < (iminarg2) ?\
 	(iminarg1) : (iminarg2))
 
-class SVD
+class s_SVD
 {
 public:
-	SVD(void);
-	~SVD(void);
+	s_SVD(void);
+	~s_SVD(void);
 
 	double **dmatrix(int nrl, int nrh, int ncl, int nch);
 	double *dvector(int nl, int nh);

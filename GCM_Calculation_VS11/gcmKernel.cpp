@@ -36,13 +36,14 @@ double gcmKernel::Frobenius(double** A, double** B, int dim, int n)
 			for (int d=0; d<dim; d++)
 			{
 				C[i][j] += (A[d][i]*B[d][j]);
-				C_sum += (A[d][i]*B[d][j]);
+				//C_sum += (A[d][i]*B[d][j]);
 			}
+			C_sum += C[i][j]*C[i][j];
 		}
 	}
 
 
-	C_sum = pow(C_sum, 0.5);
+	//C_sum = pow(C_sum, 0.5);
 
 	deleteMatrix(C, n);
 	return C_sum;

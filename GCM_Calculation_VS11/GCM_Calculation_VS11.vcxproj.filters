@@ -39,6 +39,30 @@
     <ClInclude Include="S_svm.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Readvideo.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="connexe.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="HandSegment.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="typedefs.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="FDDefine.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="VIPL_Structure.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="VIPLFDAPI.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="gcmCont.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -60,6 +84,18 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="GlobalDef.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Readvideo.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="connexe.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="HandSegment.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="gcmCont.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

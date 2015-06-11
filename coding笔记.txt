@@ -1,0 +1,22 @@
+To avoid wrong parameters, svm_check_parameter() should be
+    called before svm_train().
+
+- Function: double svm_predict_probability(const struct svm_model *model, 
+	    const struct svm_node *x, double* prob_estimates);
+    
+    This function does classification or regression on a test vector x
+    given a model with probability information.
+
+    For a classification model with probability information, this
+    function gives nr_class probability estimates in the array
+    prob_estimates. nr_class can be obtained from the function
+    svm_get_nr_class. The class with the highest probability is
+    returned. For regression/one-class SVM, the array prob_estimates
+    is unchanged and the returned value is the same as that of
+    svm_predict.
+
+
+HandSegment.cpp 中 getHogFeature函数中 hog->compute(handMat, descriptors,Size(0,0), Size(0,0)); 在debug下错误，但是在release下可以运行。
+
+
+用连续手语时，在gcm中去掉了高度限制。

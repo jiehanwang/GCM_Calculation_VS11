@@ -8,16 +8,16 @@ and B.P. Flannery
 
 
 
-SVD::SVD(void)
+s_SVD::s_SVD(void)
 {
 }
 
 
-SVD::~SVD(void)
+s_SVD::~s_SVD(void)
 {
 }
 
-double** SVD::dmatrix(int nrl, int nrh, int ncl, int nch)
+double** s_SVD::dmatrix(int nrl, int nrh, int ncl, int nch)
 	/* allocate a double matrix with subscript range m[nrl..nrh][ncl..nch] */
 {
 	int i,nrow=nrh-nrl+1,ncol=nch-ncl+1;
@@ -35,7 +35,7 @@ double** SVD::dmatrix(int nrl, int nrh, int ncl, int nch)
 	return m;
 }
 
-double* SVD::dvector(int nl, int nh)
+double* s_SVD::dvector(int nl, int nh)
 	/* allocate a double vector with subscript range v[nl..nh] */
 {
 	double *v;
@@ -43,13 +43,13 @@ double* SVD::dvector(int nl, int nh)
 	return v-nl+NR_END;
 }
 
-void SVD::free_dvector(double *v, int nl, int nh)
+void s_SVD::free_dvector(double *v, int nl, int nh)
 	/* free a double vector allocated with dvector() */
 {
 	free((FREE_ARG) (v+nl-NR_END));
 }
 
-double SVD::pythag(double a, double b)
+double s_SVD::pythag(double a, double b)
 	/* compute (a2 + b2)^1/2 without destructive underflow or overflow */
 {
 	double absa,absb;
@@ -66,7 +66,7 @@ decomposition, A = U.W.VT.  The matrix U replaces a on output.  The diagonal
 matrix of singular values W is output as a vector w[1..n].  The matrix V (not
 the transpose VT) is output as v[1..n][1..n].
 *******************************************************************************/
-void SVD::svdcmp(double **a, int m, int n, double w[], double **v)
+void s_SVD::svdcmp(double **a, int m, int n, double w[], double **v)
 
 {
 	int flag,i,its,j,jj,k,l,nm;

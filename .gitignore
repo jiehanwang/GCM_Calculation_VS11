@@ -51,6 +51,10 @@ build/
 [Oo]bj/
 output/
 input/
+model/
+matlab result/
+TestResults/
+
 
 # MSTest test Results
 [Tt]est[Rr]esult*/
