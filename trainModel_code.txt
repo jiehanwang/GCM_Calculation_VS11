@@ -1,0 +1,105 @@
+void trainModel(int nClass, int nTrainSample,int ifeatureDim, int isubSpaceDim)
+{//The code is used for model construction.
+
+	int kernelFeatureDim = nClass*nTrainSample;
+
+	//The label may be different from the index!!!!!
+	int label[NClass];
+	for (int i=0; i<nClass; i++)
+	{
+		label[i] = i;
+	}
+ 
+	//Obtain the subspaces of all the samples.
+	double** subFeaAll = newMatrix(ifeatureDim, nClass*isubSpaceDim*nTrainSample);    //subFeaAll[featureDim][subSpaceDim*nClass]
+	for (int i=0; i<nClass; i++)
+	{
+		cout<<"The "<<i<<"th sample"<<endl;
+		gcm myGcm;
+		CString fileName; 
+		fileName.Format("..\\input\\train\\w%04d.txt", i);
+		double** subFea = myGcm.GenerateSubspace(fileName);  //subFea[dim][n]
+
+		for (int f=i*isubSpaceDim; f<(i+1)*isubSpaceDim; f++)
+		{
+			for (int d=0; d<ifeatureDim; d++)
+			{
+				subFeaAll[d][f] = subFea[d][f-i*isubSpaceDim];
+			}
+		}
+		
+	}
+	//Write the kernel of training data.
+	ofstream outfile("..\\model\\subFeaAll_2.dat",ios::binary);
+	for (int i=0; i<ifeatureDim; i++)
+	{
+		for(int j=0;j<nClass*isubSpaceDim*nTrainSample;j++)
+		{
+			outfile.write((char*)&subFeaAll[i][j],sizeof(subFeaAll[i][j]));
+		}
+	}
+	outfile.close( );
+
+	//Compute the kernel matrix
+	double** kernelMatrix = newMatrix(nClass, nClass);
+	for (int i=0; i<nClass; i++)
+	{
+		cout<<"Kernel for "<<i<<" class"<<endl;
+		for (int j=0; j<nClass; j++)
+		{
+			gcmKernel myGcmKernel;
+			double** subFea1 = newMatrix(ifeatureDim, isubSpaceDim);
+			double** subFea2 = newMatrix(ifeatureDim, isubSpaceDim);
+			subMatrix(subFeaAll, subFea1, 0, ifeatureDim, i*isubSpaceDim, isubSpaceDim);
+			subMatrix(subFeaAll, subFea2, 0, ifeatureDim, j*isubSpaceDim, isubSpaceDim);
+			kernelMatrix[i][j] = myGcmKernel.Frobenius(subFea1, subFea2, ifeatureDim, isubSpaceDim);
+			deleteMatrix(subFea1, ifeatureDim);
+			deleteMatrix(subFea2, ifeatureDim); 
+		}
+	}
+
+	//////////////////////////////////////////////////////////////////////////
+	//Training SVM model 
+	//SVM settings
+	svm_parameter myPara;
+	myPara.svm_type = C_SVC;
+	myPara.kernel_type = RBF;
+	myPara.degree = 3;
+	myPara.gamma = 0.0001;
+	myPara.coef0 = 0;
+	myPara.nu = 0.5;
+	myPara.cache_size = 1000;
+	myPara.C = 10;
+	myPara.eps = 1e-5;
+	myPara.p = 0.1;
+	myPara.shrinking = 1;
+	myPara.probability = 0;
+	myPara.nr_weight = 0;
+	myPara.weight_label = NULL;
+	myPara.weight = NULL;
+	//myPara.kernel_type = PRECOMPUTED;
+
+	int probfeature = kernelFeatureDim;  //After using the kernel, the dimension is the nClass*nSamples now. 
+	svm_problem  myProblem;
+	myProblem.l = kernelFeatureDim;     //The number of samples for training. the value is nClass*nSamples
+	myProblem.y = new double[myProblem.l];
+	svm_node *x_space = new svm_node[(probfeature+1) * myProblem.l];
+	myProblem.x = new svm_node *[myProblem.l];   
+	for(int i=0;i<myProblem.l;i++)
+	{
+		for (int j=0;j<probfeature;j++)
+		{
+			x_space[(probfeature+1)*i+j].index=j+1;
+			x_space[(probfeature+1)*i+j].value=kernelMatrix[i][j];   //a sample one row. col is the feature
+		}
+		x_space[(probfeature+1)*i+probfeature].index=-1;
+		myProblem.x[i]=&x_space[(probfeature+1)*i];
+		myProblem.y[i]=label[i];
+	}
+	svm_model *myModel = svm_train(&myProblem, &myPara);   
+	//Release
+	deleteMatrix(subFeaAll, ifeatureDim);
+	deleteMatrix(kernelMatrix, nClass);
+
+	svm_save_model("..\\model\\model_2", myModel);
+}

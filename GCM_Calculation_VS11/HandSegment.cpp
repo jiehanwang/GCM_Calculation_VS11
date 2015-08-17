@@ -3,7 +3,7 @@
 
 CHandSegment::CHandSegment(void)
 {
-
+	PCA_FILE_NAME = "..\\model\\pca_51.txt";
 }
 
 
@@ -141,8 +141,10 @@ void CHandSegment::kickHandsAll(IplImage* rgbImg, Mat mDepth, CvPoint leftPoint,
 	IplImage *rightOutputImg = NULL;
 
 
-	leftOutputImg =  kickOneHandAll(rgbImg,mDepth,leftPoint,leftHand);
-	rightOutputImg = kickOneHandAll(rgbImg,mDepth,rightPoint,rightHand);
+// 	leftOutputImg =  kickOneHandAll(rgbImg,mDepth,leftPoint,leftHand);
+// 	rightOutputImg = kickOneHandAll(rgbImg,mDepth,rightPoint,rightHand);
+	leftOutputImg =  kickOneHandAll_whj(rgbImg,mDepth,leftPoint,leftHand);
+	rightOutputImg = kickOneHandAll_whj(rgbImg,mDepth,rightPoint,rightHand);
 
 
 	if( leftOutputImg != NULL)
@@ -170,6 +172,86 @@ void CHandSegment::kickHandsAll(IplImage* rgbImg, Mat mDepth, CvPoint leftPoint,
 	if( rightOutputImg )
 		cvReleaseImage(&rightOutputImg);
 }
+
+IplImage* CHandSegment::kickOneHandAll_whj(IplImage* img, Mat depthMat, CvPoint point,CvRect &HandRegion)
+{
+	bool bDepthUsed = true;
+	unsigned short depthValue = depthMat.at<unsigned short>(point.y,point.x);
+	if( 0 == depthValue )
+	{
+		bDepthUsed = false;
+	}
+	int skinWidth = 30;
+	int handWidth = 30;
+	int left,right,top,bottom;
+	left = max(point.x-handWidth,0);
+	top = max(point.y-handWidth,0);
+	right = min(point.x+handWidth, 640);
+	bottom = min(point.y+handWidth,480);
+	CvRect handCvRect = cvRect(left,top,right-left,bottom-top);
+	IplImage *handImg = getROIImage(img,handCvRect);
+
+	//IplImage *handImgRemoveBack = cvCreateImage(cvSize(handImg->width, handImg->height), 
+	//	handImg->depth, 
+	//	handImg->nChannels);
+
+	//Find the minimum depth 
+	// 	unsigned short miniDepthValue = 5000;
+	// 	for(int y=0; y<handCvRect.height; y++)
+	// 	{
+	// 		for(int x=0; x<handCvRect.width; x++)
+	// 		{
+	// 			unsigned short tempDepth = depthMat.at<unsigned short>(y+handCvRect.y,x+handCvRect.x);
+	// 			if (tempDepth>0 && tempDepth<miniDepthValue)
+	// 			{
+	// 				miniDepthValue  = tempDepth;
+	// 			}
+	// 		}
+	// 	}
+
+	//Find the middle depth 
+	double midDepthValue = 0;
+	int nCount = 0;
+	for(int y=0; y<handCvRect.height; y++)
+	{
+		for(int x=0; x<handCvRect.width; x++)
+		{
+			unsigned short tempDepth = depthMat.at<unsigned short>(y+handCvRect.y,x+handCvRect.x);
+			if (tempDepth > 0)
+			{
+				midDepthValue = midDepthValue + tempDepth;
+				//cout<<tempDepth<<" ";
+				nCount++;
+			}
+
+		}
+	}
+	midDepthValue = midDepthValue/nCount;
+
+	//Remove the region with depth larger than the miniDepthValue+500;
+	for(int y=0; y<handCvRect.height; y++)
+	{
+		for(int x=0; x<handCvRect.width; x++)
+		{
+			unsigned short tempDepth = depthMat.at<unsigned short>(y+handCvRect.y,x+handCvRect.x);
+			if (tempDepth == 0 || tempDepth > midDepthValue) //miniDepthValue+200
+			{
+				(handImg->imageData + handImg->widthStep*y)[x*3+0] = 0;
+				(handImg->imageData + handImg->widthStep*y)[x*3+1] = 0;
+				(handImg->imageData + handImg->widthStep*y)[x*3+2] = 0;
+
+				(img->imageData + img->widthStep*(y + handCvRect.y))[(x+handCvRect.x)*3+0] = 0;
+				(img->imageData + img->widthStep*(y + handCvRect.y))[(x+handCvRect.x)*3+1] = 0;
+				(img->imageData + img->widthStep*(y + handCvRect.y))[(x+handCvRect.x)*3+2] = 0;
+
+			}
+		}
+	}
+
+	HandRegion = handCvRect;
+	return handImg;
+}
+
 
 IplImage* CHandSegment::kickOneHandAll(IplImage* img, Mat depthMat, CvPoint point,CvRect &HandRegion)
 {
@@ -688,6 +770,7 @@ bool CHandSegment::headDetectionVIPLSDK(IplImage* colorImage, Mat mDepth, CvPoin
 			{
 				bFound = false;
 			}
+			delete[] vFaceInfo;
 		}
 		else
 		{
@@ -723,8 +806,6 @@ bool CHandSegment::headDetectionVIPLSDK(IplImage* colorImage, Mat mDepth, CvPoin
 	}
 
 	return bFound;
-
-	
 }
 
 bool CHandSegment::headDetectionByOpenCV(IplImage* colorImage, Mat mDepth, CvPoint headCenter)

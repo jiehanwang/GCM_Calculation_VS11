@@ -1,7 +1,7 @@
 #pragma once
 #include "gcm.h"
 
-const int windowSize = 20;
+const int windowSize = 60;
 
 
 class gcmCont
@@ -20,5 +20,6 @@ public:
 	~gcmCont(void);
 	void frameUpdate(SLR_ST_Skeleton vSkeletonData, Mat vDepthData, IplImage* vColorData);
 	void recogCont(void);
+	void frameReadinAll(SLR_ST_Skeleton vSkeletonData, Mat vDepthData, IplImage* vColorData);
 };
 

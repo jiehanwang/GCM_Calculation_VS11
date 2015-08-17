@@ -10,51 +10,17 @@
 #include "stdafx.h"
 #include <iostream>
 #include "connexe.h"
-// #include "cv.h"
-// #include "highgui.h"
 #include <opencv2\opencv.hpp>
-//#include "JFD_api.h"
-//#include "JFD_define.h"
-//#include "globalDefine.h"
 #include <fstream>
 #include "VIPLFDAPI.h"
-
+#include "GlobalDef.h"
 using namespace std;
 using namespace cv;
 
 //#define GrayHandImage  //output unsegmented hand images.
-//#define UsePCA
 
-const int SRC_FEA_NUM = 324;//1764;//324;
-#ifdef UsePCA
-	const int DES_FEA_NUM = 51;//51;49
-#endif
-#ifndef UsePCA
-	const int DES_FEA_NUM = 324;//1764;//324;//51;
-#endif
 
-const int IMG_SIZE = 64;
-const CString PCA_FILE_NAME = "..\\model\\pca_51.txt";
-struct Posture
-{
-	IplImage *leftHandImg;    ///< left hand image
-	IplImage *rightHandImg;   ///< right hand image
-	CvPoint leftHandPt;       ///< left hand point
-	CvPoint leftWristPt;      ///< left wrist point
-	CvPoint rightHandPt;      ///< right hand point
-	CvPoint rightWristPt;     ///< right wrist point
 
-	Posture():leftHandImg(NULL),rightHandImg(NULL) {};
-};
-
-struct ColorModel
-{
-	double mean_cr;     ///< mean of cr
-	double mean_cb;     ///< mean of cb
-	double d_cr;        ///< variance of cr
-	double d_cb;        ///< variance of cb
-	ColorModel():mean_cr(0),mean_cb(0),d_cr(0),d_cb(0){};
-};
 
 
 class CHandSegment
@@ -246,7 +212,14 @@ private:
 	CRect m_faceNeckRect;           //rect of face and neck
 
 	CvMat *pcaMat;
+
+	CString PCA_FILE_NAME;
+
 public:
 	void kickHandsAll(IplImage* rgbImg, Mat mDepth, CvPoint leftPoint, CvPoint rightPoint, Posture & posture,CvRect &leftHand,CvRect &rightHand);
 	IplImage* kickOneHandAll(IplImage* rgbImg, Mat mDepth, CvPoint point,CvRect &HandRegion);
+
+	//The version updated by Hanjie Wang
+	//A simple bounding box, whose size is changed according to the depth. 
+	IplImage* kickOneHandAll_whj(IplImage* img, Mat depthMat, CvPoint point,CvRect &HandRegion);
 };

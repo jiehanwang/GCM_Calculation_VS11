@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "gcm.h"
-
+#include <fstream>
 
 gcm::gcm(void)
 {
@@ -17,10 +17,11 @@ gcm::gcm(void)
 		gcm_subspace[i] = new double[subspaceDim];
 	}
 
-	myModel = svm_load_model("..\\model\\model_2");         //SVM model
+	myModel = svm_load_model("..\\model\\model_UI4_noHandSeg_noPSVM");         //SVM model
+	myModel_candi = svm_load_model("..\\model\\model_UI4_noHandSeg_PSVM");         //SVM model
 
 	subFeaAll_model = newMatrix(featureDim, NClass*subSpaceDim*NTrainSample);  //Training Matrix
-	fstream infile("..\\model\\subFeaAll_2.dat",ios::in|ios::binary);
+	fstream infile("..\\model\\subFeaAll_UI4_noHandSeg_noPSVM.dat",ios::in|ios::binary);
 	for (int i=0; i<featureDim; i++)
 	{
 		for(int j=0;j<NClass*subSpaceDim*NTrainSample;j++)
@@ -372,7 +373,6 @@ void gcm::oriData2Feature(vector<SLR_ST_Skeleton> vSkeletonData, vector<Mat> vDe
 			for (int k=0; k<skP.size(); k++)
 			{
 				skP[k] /=maxSKP;
-				//cout<<skP[k]<<" ";
 				feature_ori[totalFrameNum][k] = skP[k];
 			}
 			//cout<<endl;
@@ -450,7 +450,10 @@ int gcm::patchRun(vector<SLR_ST_Skeleton> vSkeletonData, vector<Mat> vDepthData,
 	}
 	x[kernelFeatureDim+1].index=-1;
 
-	int testID = svm_predict_probability(myModel, x, prob_estimates);
+	//int testID = svm_predict_probability(myModel, x, prob_estimates);
+	int testID_noPro = svm_predict(myModel, x);
+
+	int testID = svm_predict_probability(myModel_candi, x, prob_estimates);
 
 	//Sort and get the former 5 ranks. 
 	vector<scoreAndIndex> rank;
@@ -463,14 +466,26 @@ int gcm::patchRun(vector<SLR_ST_Skeleton> vSkeletonData, vector<Mat> vDepthData,
 	}
 	sort(rank.begin(),rank.end(),comp);
 
-	for (int i=0; i<5; i++)
+	
+	rankIndex[0] = testID_noPro;
+	rankScore[0] = 1.0;
+	int candiN = 0;
+	//for (int i=1; i<5; i++)
+	int seqCandiN = 1;
+	while(seqCandiN<5)
 	{
-		rankIndex[i] = rank[i].index;
-		rankScore[i] = rank[i].score;
+		if (rank[candiN].index == testID_noPro)
+		{
+			candiN++;
+			continue;
+		}
+		rankIndex[seqCandiN] = rank[candiN].index;
+		rankScore[seqCandiN] = rank[candiN].score;
+		candiN++;
+		seqCandiN++;
 	}
-
 	releaseResource();
-	return testID;
+	return rankIndex[0];
 }
 
 
@@ -482,4 +497,271 @@ void gcm::releaseResource(void)
 bool gcm::comp(scoreAndIndex dis_1, scoreAndIndex dis_2)
 {
 	return dis_1.score > dis_2.score;
+}
+
+void gcm::computePQ(vector<double*> P, vector<double**> Q, int nFrames_PQ)
+{
+	//The loop for all the frames. 
+	for (int i=0; i<nFrames_PQ; i++)
+	{
+		//Compute P
+		double* tempP = new double[featureDim];
+		for (int j=0; j<featureDim; j++)
+		{
+			tempP[j] = 0;
+			for (int k=0; k<i; k++)
+			{
+				tempP[j] += feature_ori[k][j];
+			}
+		}
+		P.push_back(tempP);    //To release it when reaching the end of a sentence 
+
+		//Compute Q
+		double** tempQ;
+		tempQ = new double *[featureDim];
+		for (int f=0; f<featureDim; f++)
+		{
+			tempQ[f] = new double[featureDim];
+		}
+		for (int f1=0; f1<featureDim; f1++)
+		{
+			for (int f2=0; f2<featureDim; f2++) 
+			{
+				tempQ[f1][f2] = 0;
+				for (int l=0; l<i; l++)
+				{
+					tempQ[f1][f2] += feature_ori[f1][l]*feature_ori[f2][l];
+				}
+			}
+		}
+		Q.push_back(tempQ);      //To release it when reaching the end of a sentence 
+	}
+}
+
+//This function is used to recognize continuous SLR in a off-line way. 
+//Since the data should be read in all at once, the class gcmCont is not necessary used. 
+int gcm::patchRun_continuous_PQ(vector<SLR_ST_Skeleton> vSkeletonData, vector<Mat> vDepthData, vector<IplImage*> vColorData, 
+								int *rankIndex, double *rankScore)
+{
+	int window = 40;
+	int kernelFeatureDim = NClass*NTrainSample;
+	//Computing features
+	cout<<"Computing features..."<<endl;
+	oriData2Feature(vSkeletonData, vDepthData, vColorData);
+
+	//////////////////////////////////////////////////////////////////////////
+	//Compute P and Q all at once.
+	vector<double*> P;
+	vector<double**> Q;
+	cout<<"Computing P and Q..."<<endl;
+
+	//computePQ(P, Q, vColorData.size());
+	//white
+	for (int d=0; d<nDimension; d++)
+	{
+		double dimAve = 0.0;
+		for (int f=0; f<nFrames; f++)
+		{
+			dimAve += feature_ori[f][d];
+		}
+		dimAve /= nFrames;
+		for (int f=0; f<nFrames; f++)
+		{
+			feature_ori[f][d] -= dimAve;
+		}
+	}
+
+	//Compute P and Q.
+	int nFrames_PQ = vColorData.size();
+	for (int i=0; i<nFrames_PQ; i++)
+	{
+		cout<<"Current "<<i<<"/"<<nFrames_PQ<<endl;
+		//Compute P
+		double* tempP = new double[featureDim];
+		for (int j=0; j<featureDim; j++)
+		{
+			tempP[j] = 0;
+			for (int k=0; k<i; k++)
+			{
+				tempP[j] += feature_ori[k][j];
+			}
+		}
+		P.push_back(tempP);    //To release it when reaching the end of a sentence 
+
+		//Compute Q
+		double** tempQ;
+		tempQ = newMatrix(featureDim, featureDim);
+		for (int f1=0; f1<featureDim; f1++)
+		{
+			for (int f2=0; f2<featureDim; f2++) 
+			{
+				tempQ[f1][f2] = 0;
+				for (int l=0; l<i; l++)
+				{
+					tempQ[f1][f2] += feature_ori[f1][l]*feature_ori[f2][l];
+				}
+			}
+		}
+		Q.push_back(tempQ);      //To release it when reaching the end of a sentence 
+	}
+	//////////////////////////////////////////////////////////////////////////	
+	
+	double** C = newMatrix(featureDim, featureDim);
+	double* p_temp = new double[featureDim];  //The deltaP
+	double** Pm = newMatrix(featureDim, featureDim);
+	for (int i=window; i<vColorData.size()-window; i++)
+	{
+		int begin = i-window/2;
+		int end = i+window/2;
+
+		//The matrix from p
+		for (int pf=0; pf<featureDim; pf++)
+		{
+			p_temp[pf] = P[end][pf]-P[begin][pf];
+		}
+		vector2matrix(p_temp, p_temp, Pm,featureDim);
+
+		//Compute the covariance matrix
+		for (int l=0; l<featureDim; l++)
+		{
+			for (int m=0; m<featureDim; m++)
+			{
+				C[l][m] = ((Q[end][l][m]-Q[begin][l][m])-Pm[l][m]/(end-begin+1))/(end-begin);
+			}
+		}
+
+		//Regularization term added
+		for (int d=0; d<nDimension; d++)
+		{
+			for (int d2=0; d2<nDimension; d2++)
+			{
+				//C[d][d2] /= nFrames;
+				if (d == d2)
+				{
+					C[d][d2] += 0.001;
+				}
+			}
+		}
+
+		//The subspace matrix
+		PQsubspace(C, gcm_subspace);
+
+		//For debug
+		ofstream foutDebug;
+		foutDebug.open("..\\output\\debug.txt");
+		for (int i=0; i<featureDim; i++)
+		{
+			for (int j=0; j<subSpaceDim; j++)
+			{
+				foutDebug<<gcm_subspace[i][j]<<"\t";
+			}
+			foutDebug<<"\n";
+		}
+		foutDebug << flush;
+		foutDebug.close();
+
+		//The SVM classification
+		x[0].index = 0;
+		for (int j=0; j<kernelFeatureDim; j++)
+		{
+			subMatrix(subFeaAll_model, subFea1, 0, featureDim, j*subSpaceDim, subSpaceDim);
+			x[j+1].value = myGcmKernel.Frobenius(subFea1, gcm_subspace, featureDim, subSpaceDim);
+			x[j+1].index=j+1;
+		}
+		x[kernelFeatureDim+1].index=-1;
+
+		int testID = svm_predict_probability(myModel, x, prob_estimates);
+		cout<<"Frame: "<<i<<"/"<<vColorData.size()-window<<" Result: "<<testID<<endl;
+	}
+	delete[] p_temp;
+	deleteMatrix(Pm,featureDim);
+	deleteMatrix(C, featureDim);
+
+	//To delete P and Q
+
+
+	return 1;
+
+// 	gcmSubspace();
+// 
+// 	x[0].index = 0;
+// 	for (int j=0; j<kernelFeatureDim; j++)
+// 	{
+// 		subMatrix(subFeaAll_model, subFea1, 0, featureDim, j*subSpaceDim, subSpaceDim);
+// 		x[j+1].value = myGcmKernel.Frobenius(subFea1, gcm_subspace, featureDim, subSpaceDim);
+// 		x[j+1].index=j+1;
+// 	}
+// 	x[kernelFeatureDim+1].index=-1;
+// 
+// 	int testID = svm_predict_probability(myModel, x, prob_estimates);
+// 
+// 	//Sort and get the former 5 ranks. 
+// 	vector<scoreAndIndex> rank;
+// 	for (int i=0; i<myModel->nr_class; i++)
+// 	{
+// 		scoreAndIndex temp;
+// 		temp.index = myModel->label[i];
+// 		temp.score = prob_estimates[i];
+// 		rank.push_back(temp);
+// 	}
+// 	sort(rank.begin(),rank.end(),comp);
+// 
+// 	for (int i=0; i<5; i++)
+// 	{
+// 		rankIndex[i] = rank[i].index;
+// 		rankScore[i] = rank[i].score;
+// 	}
+// 
+// 
+// 	//Release
+// 	nFrames = 0;
+// 
+// 	return testID;
+}
+
+void gcm::vector2matrix(double* v, double* u, double** m, int d)
+{//v and u are two vectors. m is the output matrix. d is the length of the vector.
+//v    u     m
+//|   ---     
+//|    
+// 	m = new double*[d];
+// 	for (int i=0; i<d; i++)
+// 	{
+// 		m[i] = new double[d];
+// 	}
+	//m = newMatrix(d,d);
+	for (int i=0; i<d; i++)
+	{
+		for (int j=0; j<d; j++)
+		{
+			m[i][j] = v[i]*u[j];
+		}
+	}
+}
+
+
+
+void gcm::PQsubspace(double** C, double** PQ_subspace)
+{
+	//SVD to obtain the subspace
+	double* w;
+	w = new double[nDimension];
+	double **v;
+	v = newMatrix(nDimension,nDimension);
+
+	gcmSVD.svdcmp(C, nDimension, nDimension, w, v);
+
+	//The C[all][reDim =10] is the subspace
+	for (int i=0; i<nDimension; i++)
+	{
+		for (int j=0; j<subspaceDim; j++)
+		{
+			PQ_subspace[i][j] = C[i][j];
+		}
+	}
+
+	//Release
+	//deleteMatrix(C,nDimension);
+	delete w;
+	deleteMatrix(v, nDimension);
 }

@@ -56,7 +56,12 @@ void gcmCont::recogCont(void)
 
 	delete []rankIndex;
 	delete []rankScore;
+}
 
 
-	
+void gcmCont::frameReadinAll(SLR_ST_Skeleton vSkeletonData, Mat vDepthData, IplImage* vColorData)
+{
+	cSkeletonData.push_back(vSkeletonData);
+	cDepthData.push_back(vDepthData);
+	cColorData.push_back(vColorData);
 }

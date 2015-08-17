@@ -11,13 +11,15 @@
 //#include <direct.h>
 using namespace cv;
 
-//#define  CompKernel
-#define  LoadKernel
+//////////////////////////////////////////////////////////////////////////
+#define  CompKernel
+//#define  LoadKernel
 
 //#define TRAIN
 #define TEST
 //#define ContinuousTest
 //#define BatchTEST
+//////////////////////////////////////////////////////////////////////////
 
 void trainModel(int nClass, int nTrainSample,int ifeatureDim, int isubSpaceDim)
 {//The code is used for model construction.
@@ -38,13 +40,26 @@ void trainModel(int nClass, int nTrainSample,int ifeatureDim, int isubSpaceDim)
 	int feaIndexAll = 0;
 	CString fileName; 
 	gcm myGcm;
+
+	int groupID[4];
+	groupID[0] = 02;
+	groupID[1] = 12;
+	groupID[2] = 24;
+	groupID[3] = 50;
+
+// 	groupID[0] = 51;
+// 	groupID[1] = 52;
+// 	groupID[2] = 53;
+// 	groupID[3] = 54;
+
+
 	for (int i=0; i<nClass; i++)
 	{
 		cout<<"The "<<i<<"th Class ";
 		for (int t=0; t<nTrainSample; t++)
 		{
 			cout<<".";
-			fileName.Format("..\\input\\test_%d\\w%04d.txt", t+50, i);
+			fileName.Format("C:\\UserData\\iData\\Outputs\\ftdcgrs_whj_output\\\dim334_SC_noHandSeg_allFrame_370_21groups_Cplus\\test_%02d\\w%04d.txt", groupID[t], i);
 			double** subFea = myGcm.GenerateSubspace(fileName);  //subFea[ifeatureDim][isubSpaceDim]
 			int feaIndex = 0;
 			for (int f=0; f<isubSpaceDim; f++)
@@ -60,7 +75,7 @@ void trainModel(int nClass, int nTrainSample,int ifeatureDim, int isubSpaceDim)
 		cout<<endl;
 	}
 	//Write the kernel of training data.
-	ofstream outfile("..\\model\\subFeaAll.dat",ios::binary);
+	ofstream outfile("..\\model\\subFeaAll_UI4_noHandSeg_PSVM.dat",ios::binary);
 	for (int i=0; i<ifeatureDim; i++)
 	{
 		for(int j=0;j<nClass*isubSpaceDim*nTrainSample;j++)
@@ -69,8 +84,6 @@ void trainModel(int nClass, int nTrainSample,int ifeatureDim, int isubSpaceDim)
 		}
 	}
 	outfile.close( );
-
-	
 
 	//Compute the kernel matrix
 	double** kernelMatrix = newMatrix(nClass*nTrainSample, nClass*nTrainSample);
@@ -92,7 +105,7 @@ void trainModel(int nClass, int nTrainSample,int ifeatureDim, int isubSpaceDim)
 	}
 
 	//Write the kernel of training data.
-	ofstream outfile_kernel("..\\model\\kernel.dat",ios::binary);
+	ofstream outfile_kernel("..\\model\\kernel_UI4_noHandSeg_PSVM.dat",ios::binary);
 	for (int i=0; i<nClass*nTrainSample; i++)
 	{
 		for(int j=0;j<nClass*nTrainSample;j++)
@@ -144,7 +157,7 @@ void trainModel(int nClass, int nTrainSample,int ifeatureDim, int isubSpaceDim)
 	myPara.eps = 0.001;    //1e-5
 	myPara.p = 0.1;
 	myPara.shrinking = 1; 
-	myPara.probability = 1;
+	myPara.probability = 1; ///////////////////////////////////////////////!!!
 	myPara.nr_weight = 0;
 	myPara.weight_label = NULL;
 	myPara.weight = NULL;
@@ -156,7 +169,7 @@ void trainModel(int nClass, int nTrainSample,int ifeatureDim, int isubSpaceDim)
 
 	for(int i=0;i<myProblem.l;i++)
 	{
-		svm_node *x_space = new svm_node[kernelFeatureDim+1+1];  //The last one is for -1
+		svm_node *x_space = new svm_node[kernelFeatureDim+1+1];  //The first one is for PRECOMPUTED. The last one is for -1
 		x_space[0].index = 0;
 		x_space[0].value = i+1;
 		for (int j=0;j<kernelFeatureDim;j++)
@@ -171,7 +184,7 @@ void trainModel(int nClass, int nTrainSample,int ifeatureDim, int isubSpaceDim)
 		myProblem.y[i]=label[index];
 	}
 	svm_model *myModel = svm_train(&myProblem, &myPara);   
-	svm_save_model("..\\model\\model_2", myModel);
+	svm_save_model("..\\model\\model_UI4_noHandSeg_PSVM", myModel);
 	//Release
 	deleteMatrix(subFeaAll, ifeatureDim);
 	deleteMatrix(kernelMatrix, nClass);
@@ -209,17 +222,17 @@ int _tmain(int argc, _TCHAR* argv[])
 	bool fileFindFlag;
 	CFileFind fileFind;
 	CString normFileName;
-	normFileName.Format("E:\\isolatedDemoSign4test\\P54\\*.oni");
-	//normFileName.Format("C:\\Users\\ºº½Ü\\Desktop\\TestData\\*.oni");
+	normFileName.Format("E:\\isolatedDemoSign4test\\P00\\*.oni");
 	fileFindFlag = true;
 	fileFindFlag = fileFind.FindFile(normFileName);
 	int correct = 0;
+	int allN = 0;
 
 	//The loop of testing
-	int *rankIndex;
-	rankIndex = new int[5];
-	double *rankScore;
-	rankScore = new double[5];
+// 	int *rankIndex = new int[5];
+// 	double *rankScore = new double[5];
+	int rankIndex[5];
+	double rankScore[5];
 
 	while (fileFindFlag)
 	{
@@ -245,47 +258,61 @@ int _tmain(int argc, _TCHAR* argv[])
 			cout<<rankIndex[i]<<'\t'<<rankScore[i]<<endl;
 		}
 
+		allN++;
 		cout<<videoFileName<<", result: "<<result;
 		if (result == classNo)
 		{
-			cout<<"-----Correct";
 			correct++;
+			cout<<"-----Correct"<<"------total "<<correct<<"/"<<allN;
 		}
 		else
 		{
-			cout<<"-------Wrong";
+			cout<<"-------Wrong"<<"------total "<<correct<<"/"<<allN;
 		}
+		
 		cout<<endl<<endl;
 	}
-	delete []rankIndex;
-	delete []rankScore;
-	float acc = (float)correct/370;
+
+	float acc = (float)correct/370.0;
 	cout<<"Accuracy: "<<acc<<endl;
 	
 #endif
 
 
 #ifdef ContinuousTest
-	CString videoFilePath = "..\\input\\P54_0001_1_0_20121002.oni";
+	CString videoFilePath = "E:\\continuousDemoSign4test\\p08_01\\S08_0000_1_0_20130412.oni";
+	//CString videoFilePath = "E:\\isolatedDemoSign4test\\P54\\P54_0002_1_0_20121002.oni";
 	Readvideo myReadVideo;
 	string s = (LPCTSTR)videoFilePath;
 	myReadVideo.readvideo(s);
 	int frameSize = myReadVideo.vColorData.size();
 	cout<<"Total frameSize "<<frameSize<<endl;
 
-	gcmCont myGcmCont;
-	vector<SLR_ST_Skeleton> cSkeletonData;
-	vector<Mat> cDepthData;
-	vector<IplImage*> cColorData;
-	for (int i=0; i<frameSize; i++)
-	{
-		myGcmCont.frameUpdate(myReadVideo.vSkeletonData[i], myReadVideo.vDepthData[i], myReadVideo.vColorData[i]);
-		if (myGcmCont.dataReady == true)
-		{
-			myGcmCont.recogCont();
-		}
+	//On-line test
+// 	gcmCont myGcmCont;
+// 	vector<SLR_ST_Skeleton> cSkeletonData;
+// 	vector<Mat> cDepthData;
+// 	vector<IplImage*> cColorData;
+// 	for (int i=0; i<frameSize; i++)
+// 	{
+// 		myGcmCont.frameUpdate(myReadVideo.vSkeletonData[i], myReadVideo.vDepthData[i], myReadVideo.vColorData[i]);
+// 		if (myGcmCont.dataReady == true)
+// 		{
+// 			myGcmCont.recogCont();
+// 		}
+// 
+// 	}
 
-	}
+	//Off-line test
+	gcm myGcm;
+	int *rankIndex;
+	rankIndex = new int[5];
+	double *rankScore;
+	rankScore = new double[5];
+	myGcm.patchRun_continuous_PQ(myReadVideo.vSkeletonData, myReadVideo.vDepthData, myReadVideo.vColorData, 
+		rankIndex, rankScore);
+
+
 #endif
 	//////////////////////////////////////////////////////////////////////////
 	//Batch Test 
@@ -293,9 +320,9 @@ int _tmain(int argc, _TCHAR* argv[])
 	int kernelFeatureDim = NClass*NTrainSample;
 	//Load the model and training data for kernel construction.
 	cout<<"Loading models..."<<endl;
-	svm_model *myModel = svm_load_model("..\\model\\model_2");         //SVM model
+	svm_model *myModel = svm_load_model("..\\model\\model_UDp00_handSeg_noPSVM");         //SVM model
 	double** subFeaAll = newMatrix(featureDim, NClass*subSpaceDim*NTrainSample);  //Training Matrix
-	fstream infile("..\\model\\subFeaAll_2.dat",ios::in|ios::binary);
+	fstream infile("..\\model\\subFeaAll_UDp00_handSeg_noPSVM.dat",ios::in|ios::binary);
 	for (int i=0; i<featureDim; i++)
 	{
 		for(int j=0;j<NClass*subSpaceDim*NTrainSample;j++)
@@ -314,9 +341,13 @@ int _tmain(int argc, _TCHAR* argv[])
 	double** subFea = newMatrix(featureDim, subSpaceDim);    
 	svm_node* x = new svm_node[kernelFeatureDim+1+1];           //To release
 	int* votewhj = new int[kernelFeatureDim];               //To release
+
+	double *prob_estimates;  
+	prob_estimates = new double[NClass];
+
 	for (int i=0; i<NClass; i++)
 	{
-		fileName.Format("..\\input\\test_54\\w%04d.txt", i);
+		fileName.Format("C:\\UserData\\iData\\Outputs\\ftdcgrs_whj_output\\dim334_CTskp_allFrame_369sign\\test_50\\w%04d.txt", i);
 		subFea = myGcm.GenerateSubspace(fileName);  //subFea[dim][n]
 		x[0].index = 0;
 		for (int j=0; j<kernelFeatureDim; j++)
@@ -327,9 +358,10 @@ int _tmain(int argc, _TCHAR* argv[])
 		}
 		x[kernelFeatureDim+1].index=-1;
 
-		//int testID = svm_predict(myModel, x, votewhj);
+		
+		//int testID = svm_predict_probability(myModel, x, prob_estimates);
 		int testID = svm_predict(myModel, x);
-
+		
 		cout<<i<<"th result "<<testID;
 		if (testID == i)
 		{
@@ -341,6 +373,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			cout<<"----Wrong"<<endl;
 		}
 	}
+	delete[] prob_estimates;
 	deleteMatrix(subFea1, featureDim);
 	deleteMatrix(subFea, featureDim);
 	deleteMatrix(subFeaAll, featureDim);
